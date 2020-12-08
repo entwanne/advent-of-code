@@ -1,0 +1,5 @@
+*~
+*.py[oc]
+*.txt
+/env/
+/data/
