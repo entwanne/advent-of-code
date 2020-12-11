@@ -32,25 +32,30 @@ print(acc)
 def execution(i=0, acc=0, visited=set(), edit=True):
     if i >= len(commands):
         print(acc)
-        return
+        return True
     if i in visited:
-        return
+        return False
 
     cmd, arg = commands[i]
+    visited.add(i)
 
     if cmd == 'acc':
         return execution(i+1, acc+arg, visited, edit=edit)
 
     if cmd == 'nop':
-        execution(i+1, acc, visited, edit=edit)
-    elif edit:
-        execution(i+1, acc, visited, edit=False)
+        ret = execution(i+1, acc, visited, edit=edit)
+        if ret:
+            return True
+        elif edit:
+            return execution(i+arg, acc, visited, edit=False)
+        return False
 
-    visited = set(visited)
-    visited.add(i)
     if cmd == 'jmp':
-        execution(i+arg, acc, visited, edit=edit)
-    elif edit:
-        execution(i+arg, acc, visited, edit=False)
+        ret = execution(i+arg, acc, visited, edit=edit)
+        if ret:
+            return True
+        elif edit:
+            return execution(i+1, acc, visited, edit=False)
+        return False
 
 execution()
