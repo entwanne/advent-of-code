@@ -4,16 +4,15 @@ numbers = [int(n) for n in sys.stdin.read().split(',')]
 
 
 def find_nth(nth):
-    memory = {n: (i, None) for i, n in enumerate(numbers)}
-    a, b = memory[numbers[-1]]
+    memory = {n: i for i, n in enumerate(numbers)}
+    last = numbers[-1]
+    a = len(numbers) - 1
 
     for i in range(len(numbers), nth):
-        if b is None:
-            last = 0
-        else:
-            last = a - b
-        a, _ = memory.get(last, (None, None))
-        memory[last] = a, b = i, a
+        b = memory.get(last, a)
+        memory[last] = a
+        last = a - b
+        a = i
 
     return last
 
