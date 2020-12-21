@@ -4,6 +4,8 @@ import sys
 
 
 meals = []
+all_food = set()
+all_allergens = set()
 
 for line in sys.stdin:
     m = re.match(r'^([^(]+) \(contains ([^)]+)\)$', line)
@@ -11,9 +13,8 @@ for line in sys.stdin:
     food = set(food.split())
     allergens = set(allergens.split(', '))
     meals.append((food, allergens))
-
-all_allergens = set.union(*(a for _, a in meals))
-all_food = set.union(*(f for f, _ in meals))
+    all_food |= food
+    all_allergens |= allergens
 
 # p1
 
