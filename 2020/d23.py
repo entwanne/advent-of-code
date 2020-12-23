@@ -7,24 +7,31 @@ class Node:
 
 
 class Deque:
-    def __init__(self, values):
-        cache = self.cache = {}
+    def __init__(self, values=()):
+        self.current = None
+        self.cache = {}
+        self.extend(values)
 
-        prev = None
+    def extend(self, values):
+        first = self.current
+        last = first.prev if first else None
+
         for v in values:
             node = Node(v)
-            cache[v] = node
-            if prev is None:
+            self.cache[v] = node
+            if last is None:
                 first = node
             else:
-                prev.next = node
-                node.prev = prev
-            prev = node
+                last.next = node
+                node.prev = last
+            last = node
 
-        prev.next = first
-        first.prev = prev
-
-        self.current = first
+        if first:
+            first.prev = last
+        if last:
+            last.next = first
+        if not self.current:
+            self.current = first
 
     def popnext(self):
         node = self.current.next
@@ -47,10 +54,10 @@ class Deque:
 
     def __iter__(self):
         current = self.current
-        yield current
+        yield current.value
         current = current.next
         while current is not self.current:
-            yield current
+            yield current.value
             current = current.next
 
 
@@ -85,13 +92,12 @@ init = [int(x) for x in sys.stdin.read().strip()]
 
 max_value = max(init)
 cups = game(Deque(init), 100, max_value)
-print(''.join(str(c.value) for c in cups)[1:])
+print(''.join(map(str, cups))[1:])
 
 # p2
 
-cups = list(init)
-cups += list(range(max_value+1, 1000001))
-cups = Deque(cups)
+cups = Deque(init)
+cups.extend(range(max_value+1, 1000001))
 
 cups = game(cups, 10000000, 1000000)
 print(cups.current.next.value*cups.current.next.next.value)
