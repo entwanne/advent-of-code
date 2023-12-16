@@ -23,7 +23,7 @@ room_doors = {
 }
 game = {
     'hallway': [None] * 11,
-    'rooms': {
+    '_rooms': {
         'A': [
             Cell(name='D'),
             Cell(name='B'),
@@ -39,6 +39,32 @@ game = {
         'D': [
             Cell(name='B'),
             Cell(name='C'),
+        ],
+    },
+    'rooms': {
+        'A': [
+            Cell(name='B'),
+            Cell(name='D'),
+            Cell(name='D'),
+            Cell(name='A'),
+        ],
+        'B': [
+            Cell(name='C'),
+            Cell(name='C'),
+            Cell(name='B'),
+            Cell(name='D'),
+        ],
+        'C': [
+            Cell(name='B'),
+            Cell(name='B'),
+            Cell(name='A'),
+            Cell(name='C'),
+        ],
+        'D': [
+            Cell(name='D'),
+            Cell(name='A'),
+            Cell(name='C'),
+            Cell(name='A'),
         ],
     },
 }
