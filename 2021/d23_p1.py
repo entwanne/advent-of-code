@@ -134,8 +134,22 @@ def next_moves(game):
                     yield (name, i), (place, j), cost
 
 
+def game_key(game):
+    return frozenset({
+        ('h', i, cell.name)
+        for i, cell in enumerate(game['hallway'])
+        if cell is not None
+    } | {
+        (name, i, cell.name)
+        for name, room in game['rooms'].items()
+        for i, cell in enumerate(room)
+        if cell is not None
+    })
+
+
 def find(game):
     nexts = {0: [game]}
+    seen = set()
 
     while nexts:
         cost = min(nexts)
@@ -146,6 +160,10 @@ def find(game):
             del nexts[cost]
 
         clean_rooms(game)
+        key = game_key(game)
+        if key in seen:
+            continue
+        seen.add(key)
 
         if all(r == [] for r in game['rooms'].values()):
             return cost
