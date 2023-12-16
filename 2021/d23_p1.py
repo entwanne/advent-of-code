@@ -43,28 +43,28 @@ game = {
     },
     'rooms': {
         'A': [
+            Cell(name='D'),
+            Cell(name='D'),
+            Cell(name='D'),
             Cell(name='B'),
-            Cell(name='D'),
-            Cell(name='D'),
-            Cell(name='A'),
         ],
         'B': [
             Cell(name='C'),
             Cell(name='C'),
             Cell(name='B'),
-            Cell(name='D'),
+            Cell(name='A'),
         ],
         'C': [
-            Cell(name='B'),
+            Cell(name='D'),
             Cell(name='B'),
             Cell(name='A'),
-            Cell(name='C'),
+            Cell(name='A'),
         ],
         'D': [
-            Cell(name='D'),
+            Cell(name='B'),
             Cell(name='A'),
             Cell(name='C'),
-            Cell(name='A'),
+            Cell(name='C'),
         ],
     },
 }
