@@ -25,20 +25,20 @@ game = {
     'hallway': [None] * 11,
     'rooms': {
         'A': [
+            Cell(name='D'),
             Cell(name='B'),
-            Cell(name='A'),
         ],
         'B': [
             Cell(name='C'),
-            Cell(name='D'),
+            Cell(name='A'),
         ],
         'C': [
-            Cell(name='B'),
-            Cell(name='C'),
-        ],
-        'D': [
             Cell(name='D'),
             Cell(name='A'),
+        ],
+        'D': [
+            Cell(name='B'),
+            Cell(name='C'),
         ],
     },
 }
