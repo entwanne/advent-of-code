@@ -134,43 +134,21 @@ def next_moves(game):
                     yield (name, i), (place, j), cost
 
 
-def rec_find(game, cost=0):
-    clean_rooms(game)
-    if all(r == [] for r in game['rooms'].values()):
-        return True, cost
-
-    moves = set(next_moves(game))
-    if not moves:
-        return False, 0
-
-    total_costs = []
-
-    for move in moves:
-        g = copy.deepcopy(game)
-        (place1, i), (place2, j), c = move
-        place1 = g['hallway'] if place1 == 'hallway' else g['rooms'][place1]
-        place2 = g['hallway'] if place2 == 'hallway' else g['rooms'][place2]
-        place2[j] = place1[i]
-        place1[i] = None
-        f, c = rec_find(g, cost+c)
-        if f:
-            total_costs.append(c)
-
-    if total_costs:
-        return True, min(total_costs)
-    return False, 0
-
-
-def iter_find(game):
-    nexts = [(game, 0)]
+def find(game):
+    nexts = {0: [game]}
 
     while nexts:
-        game, cost = nexts.pop()
+        cost = min(nexts)
+        queue = nexts[cost]
+
+        game = queue.pop()
+        if not queue:
+            del nexts[cost]
+
         clean_rooms(game)
 
         if all(r == [] for r in game['rooms'].values()):
-            yield cost
-            continue
+            return cost
 
         moves = set(next_moves(game))
         if not moves:
@@ -183,7 +161,7 @@ def iter_find(game):
             place2 = g['hallway'] if place2 == 'hallway' else g['rooms'][place2]
             place2[j] = place1[i]
             place1[i] = None
-            nexts.append((g, cost+c))
+            nexts.setdefault(cost + c, []).append(g)
 
 
-print(min(iter_find(game)))
+print(find(game))
