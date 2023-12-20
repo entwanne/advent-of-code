@@ -6,6 +6,7 @@ import z3
 
 solver = z3.Optimize()
 
+BIT_SIZE = 32
 registers = {
     'w': 0,
     'x': 0,
@@ -51,12 +52,12 @@ print('parse')
 for cmd in parse(sys.stdin):
     match cmd:
         case ('inp', v):
-            inp = z3.Int(f'v{len(inputq)}')
+            inp = z3.BitVec(f'v{len(inputq)}', BIT_SIZE)
             solver.add(1 <= inp, inp <= 9)
             inputq.append(inp)
             v.set(inp)
         case ('eql', a, b):
-            a.set(z3.If(a.get() == b.get(), 1, 0))
+            a.set(z3.If(a.get() == b.get(), z3.BitVecVal(1, BIT_SIZE), z3.BitVecVal(0, BIT_SIZE)))
         case ('add', a, b):
             a.set(a.get() + b.get())
         case ('mul', a, b):
@@ -77,13 +78,13 @@ for cmd in parse(sys.stdin):
 print('constraints')
 solver.add(registers['z'] == 0)
 
-result = 0
 for q in inputq:
-    result = result * 10 + q
-solver.maximize(result)
+    #solver.maximize(q)
+    solver.minimize(q)
 
 print('check')
 print(solver.check())
 
 print('model')
-print(solver.model())
+model = solver.model()
+print(''.join(str(model[x]) for x in inputq))
