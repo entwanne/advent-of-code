@@ -1,0 +1,11 @@
+inp x
+mul x 2
+inp y
+mul y 3
+mul w 0
+add w y
+eql w x
+inp z
+eql z x
+add z w
+add z -2

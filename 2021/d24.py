@@ -1,20 +1,27 @@
 import itertools
-import operator
 import sys
 
 
 class Value:
     def __add__(self, rhs):
-        return OpValue(operator.add, self, rhs)
+        #return OpValue(operator.add, self, rhs)
+        pass
 
     def __radd__(self, lhs):
-        return OpValue(operator.add, lhs, self)
+        #return OpValue(operator.add, lhs, self)
+        pass
 
     def __sub__(self, rhs):
-        return OpValue(operator.sub, self, rhs)
+        return SubOpValue(self, rhs)
 
     def __rsub__(self, lhs):
-        return OpValue(operator.sub, lhs, self)
+        return SubOpValue(lhs, self)
+
+    def __floordiv__(self, rhs):
+        return DivOpValue(self, rhs)
+
+    def __rfloordiv__(self, lhs):
+        return DivOpValue(lhs, self)
 
     def __values__(self):
         raise NotImplementedError
@@ -23,19 +30,24 @@ class Value:
         raise NotImplementedError
 
 
-class OpValue(Value):
-    def __init__(self, op, lhs, rhs):
-        self.op = op
+class _BinOpValue(Value):
+    def __init__(self, lhs, rhs):
         self.lhs = lhs
         self.rhs = rhs
 
     def __repr__(self):
-        return repr((self.op.__name__, self.lhs, self.rhs))
+        lhs = repr(self.lhs)
+        if ' ' in lhs:
+            lhs = f'({lhs})'
+        rhs = repr(self.rhs)
+        if ' ' in rhs:
+            rhs = f'({rhs})'
+        return f'{lhs} {self.symbol} {rhs}'
 
     def __values__(self):
         return {
-            self.op(*args)
-            for args in itertools.product(self.lhs.__values__(), self.rhs.__values__())
+            self.op(lhs, rhs)
+            for lhs, rhs in itertools.product(self.lhs.__values__(), self.rhs.__values__())
         }
 
     def restrict(self, values):
@@ -47,20 +59,47 @@ class OpValue(Value):
             lvalues = self.lhs.__values__()
             rvalues = self.rhs.__values__()
             if None not in lvalues:
-                self.rhs.restrict({lv - v for v in values for lv in lvalues})
+                self.rhs.restrict({self.op(lv, v) for v in values for lv in lvalues})
                 if self.rhs.__values__() != rvalues:
                     change = True
 
             lvalues = self.lhs.__values__()
             rvalues = self.rhs.__values__()
             if None not in rvalues:
-                self.lhs.restrict({v + rv for v in values for rv in rvalues})
+                self.lhs.restrict({self.rev_op(v, rv) for v in values for rv in rvalues})
                 if self.lhs.__values__() != lvalues:
                     change = True
 
 
+class SubOpValue(_BinOpValue):
+    symbol = '-'
+
+    @staticmethod
+    def op(lhs, rhs):
+        return lhs - rhs
+
+    @staticmethod
+    def rev_op(lhs, rhs):
+        return lhs + rhs
+
+
+class DivOpValue(_BinOpValue):
+    symbol = '/'
+
+    @staticmethod
+    def op(lhs, rhs):
+        return lhs // rhs
+
+    @staticmethod
+    def rev_op(lhs, rhs):
+        return lhs * rhs
+
+
 class SetValue(Value):
+    _id_seq = itertools.count(1)
+
     def __init__(self, *values):
+        self.id = f'v{next(self._id_seq)}'
         if values:
             self.values = set(values)
         else:
@@ -68,8 +107,8 @@ class SetValue(Value):
 
     def __repr__(self):
         if None in self.values:
-            return 'int'
-        return repr(self.values)
+            return f'{self.id}=int'
+        return f'{self.id}={self.values!r}'
 
     def __values__(self):
         if None in self.values:
@@ -77,13 +116,11 @@ class SetValue(Value):
         return self.values
 
     def restrict(self, values):
-        print(self.values, values)
         if None in self.values:
             self.values.clear()
             self.values.update(values)
         else:
             self.values.intersection_update(values)
-        print('->', self.values)
         if not self.values:
             raise ValueError
 
@@ -136,29 +173,39 @@ registers = {
     'y': SetValue(),
     'z': IntValue(0),
 }
+queue = []
+
 print(registers)
+print(queue)
 
 for cmd in reversed(commands):
+    print('---')
     print(cmd)
     match cmd:
         case ('add', a, b):
-            #v = registers[a.name]
             v1 = a.get()
-            #op = OpValue(operator.add, v, b)
-            #print('add', v, a, b)
             op = v1 - b.get()
-            #print(op)
-            #print(op.__values__())
             a.set(op)
-        case ('eql', a, b):
-            #print('eql', a, b)
+        case ('mul', a, b):
             v1 = a.get()
-            #print('before', v1.__values__())
+            if b.get().__values__() == {0}:
+                v1.restrict({0})
+                a.set(SetValue())
+            else:
+                op = v1 // b.get()
+                a.set(op)
+        case ('eql', a, b):
+            v1 = a.get()
             v1.restrict({0, 1})
-            #print('after', v1.__values__())
             # Set new variable
-            if v1.__values__ == {0}:
-                # if == 0, retrict a.values <-> b.values
+            if v1.__values__() == {1}:
                 a.set(b.get())
             else:
                 a.set(SetValue())
+        case ('inp', a):
+            v = a.get()
+            v.restrict(range(1, 10))
+            queue.append(v)
+            a.set(SetValue())
+    print(registers)
+    print(queue)
