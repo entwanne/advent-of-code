@@ -1,0 +1,10 @@
+inp x
+div x 2
+inp y
+eql x y
+add z x
+inp x
+mod x 3
+eql x y
+add z x
+add z -2
