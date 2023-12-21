@@ -1,75 +1,189 @@
-import heapq
-import re
-import sys
+import copy
+from dataclasses import dataclass
 
-grid = {}
-final_grid = {(3, 2): 'A', (3, 3): 'A', (5, 2): 'B', (5, 3): 'B', (7, 2): 'C', (7, 3): 'C', (9, 2): 'D', (9, 3): 'D'}
-base_points = {'A': 1, 'B': 10, 'C': 100, 'D': 1000}
+@dataclass
+class Cell:
+    name: str
 
-for y, line in enumerate(sys.stdin):
-    for x, c in enumerate(line.rstrip()):
-        if c == '#' or c == ' ':
+    @property
+    def energy(self):
+        return {
+            'A': 1,
+            'B': 10,
+            'C': 100,
+            'D': 1000,
+        }[self.name]
+
+
+room_doors = {
+    'A': 2,
+    'B': 4,
+    'C': 6,
+    'D': 8,
+}
+game = {
+    'hallway': [None] * 11,
+    'rooms': {
+        'A': [
+            Cell(name='B'),
+            Cell(name='A'),
+        ],
+        'B': [
+            Cell(name='C'),
+            Cell(name='D'),
+        ],
+        'C': [
+            Cell(name='B'),
+            Cell(name='C'),
+        ],
+        'D': [
+            Cell(name='D'),
+            Cell(name='A'),
+        ],
+    },
+}
+
+
+def print_game(game):
+    print(''.join(
+        '.' if c is None else c.name
+        for c in game['hallway']
+    ))
+    def room_char(c, i):
+        room = game['rooms'][c]
+        if i >= len(room):
+            return ' '
+        if not room[i]:
+            return '.'
+        return room[i].name
+    def print_rooms(i):
+        print(f'  {room_char("A", i)} {room_char("B", i)} {room_char("C", i)} {room_char("D", i)}  ')
+    print_rooms(0)
+    print_rooms(1)
+
+
+def clean_rooms(game):
+    for name, room in game['rooms'].items():
+        while room and room[-1] and room[-1].name == name:
+            room.pop()
+
+
+def list_available_hallway(game, i, energy):
+    hallway = game['hallway']
+    yield i, 0
+
+    nexts = []
+    if 0 < i < len(hallway):
+        nexts.append((i-1, -1, energy))
+    if 0 <= i < len(hallway) -1:
+        nexts.append((i+1, 1, energy))
+
+    while nexts:
+        i, d, cost = nexts.pop(0)
+        if hallway[i] is not None:
             continue
-        if c == '.':
-            c = ''
-        grid[x, y] = c
+        yield i, cost
+        cost += energy
+        if 0 <= i+d < len(hallway):
+            nexts.append((i+d, d, cost))
 
 
-def can_move(grid, c, oldkey, key):
-    t = grid.get(key, 'X')
-    if t:
-        return False
-    if key in final_grid:
-        if final_grid[key] == c:
-            return key[1] > oldkey[1]
-        else:
-            return oldkey in final_grid and key[1] < oldkey[1]
-    return True
+def list_available(game, place, i):
+    name = place[i].name
+    energy = place[i].energy
+
+    if place is game['hallway']:
+        door_cost = next((cost for j, cost in list_available_hallway(game, i, energy) if j == room_doors[name]), None)
+        if door_cost is None:
+            return
+        room = game['rooms'][name]
+        if all(c is None for c in room):
+            yield (name, len(room) - 1, door_cost + len(room) * energy)
+        return
+
+    if any(place[j] is not None for j in range(i)):
+        return
+    door_name = next(dn for dn, r in game['rooms'].items() if r is place)
+    door = room_doors[door_name]
+    door_cost = (i+1) * energy
+
+    target_door = room_doors[name]
+    target_room = game['rooms'][name]
+    availables = set(list_available_hallway(game, door, energy))
+    if any(j == target_door for j, _ in availables) and all(c is None for c in target_room):
+        move_cost = next(c for j, c in availables if j == target_door)
+        yield (name, len(target_room)-1, door_cost + move_cost + len(target_room)*energy)
+        return
+
+    for j, cost in availables:
+        if j not in room_doors.values():
+            yield 'hallway', j, cost + door_cost
 
 
-def serialize(grid):
-    return frozenset((x, y, c) for (x, y), c in grid.items())
+def next_moves(game):
+    hallway = game['hallway']
+    for i, c in enumerate(hallway):
+        if c is not None:
+            for place, j, cost in list_available(game, hallway, i):
+                yield ('hallway', i), (place, j), cost
+
+    for name, room in game['rooms'].items():
+        for i, c in enumerate(room):
+            if c is not None:
+                for place, j, cost in list_available(game, room, i):
+                    yield (name, i), (place, j), cost
 
 
-def unserialize(sgrid):
-    return {(x, y): c for x, y, c in sgrid}
+def rec_find(game, cost=0):
+    clean_rooms(game)
+    if all(r == [] for r in game['rooms'].values()):
+        return True, cost
+
+    moves = set(next_moves(game))
+    if not moves:
+        return False, 0
+
+    total_costs = []
+
+    for move in moves:
+        g = copy.deepcopy(game)
+        (place1, i), (place2, j), c = move
+        place1 = g['hallway'] if place1 == 'hallway' else g['rooms'][place1]
+        place2 = g['hallway'] if place2 == 'hallway' else g['rooms'][place2]
+        place2[j] = place1[i]
+        place1[i] = None
+        f, c = rec_find(g, cost+c)
+        if f:
+            total_costs.append(c)
+
+    if total_costs:
+        return True, min(total_costs)
+    return False, 0
 
 
-def print_grid(grid):
-    width = max(x for x, _ in grid) + 2
-    height = max(y for _, y in grid) + 1
-    for y in range(height):
-        print(''.join(grid.get((x, y), '#') or ' ' for x in range(width)))
+def iter_find(game):
+    nexts = [(game, 0)]
 
+    while nexts:
+        game, cost = nexts.pop()
+        clean_rooms(game)
 
-def solve(grid, final_grid):
-    sgrid = serialize(grid)
-    win_sgrid = serialize({k: '' for k in grid} | final_grid)
-    dist = {sgrid: 0}
-    paths = [(0, sgrid)]
-
-    while paths:
-        current, sgrid = heapq.heappop(paths)
-        if sgrid in dist and dist[sgrid] < current:
+        if all(r == [] for r in game['rooms'].values()):
+            yield cost
             continue
-        if sgrid == win_sgrid:
-            break
-        points = dist[sgrid]
-        grid = unserialize(sgrid)
 
-        for (x, y), c in grid.items():
-            if not c:
-                continue
-            for dx, dy in ((-1, 0), (1, 0), (0, -1), (0, 1)):
-                nx, ny = x+dx, y+dy
-                if can_move(grid, c, (x, y), (nx, ny)):
-                    p = points + base_points[c]
-                    sgrid2 = sgrid - {(x, y, c), (nx, ny, '')} | {(x, y, ''), (nx, ny, c)}
-                    if sgrid2 not in dist or p < dist[sgrid2]:
-                        dist[sgrid2] = p
-                        heapq.heappush(paths, (p, sgrid2))
+        moves = set(next_moves(game))
+        if not moves:
+            continue
 
-    return dist[win_sgrid]
+        for move in moves:
+            g = copy.deepcopy(game)
+            (place1, i), (place2, j), c = move
+            place1 = g['hallway'] if place1 == 'hallway' else g['rooms'][place1]
+            place2 = g['hallway'] if place2 == 'hallway' else g['rooms'][place2]
+            place2[j] = place1[i]
+            place1[i] = None
+            nexts.append((g, cost+c))
 
 
-print(solve(grid, final_grid))
+print(min(iter_find(game)))
