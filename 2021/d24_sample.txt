@@ -1,0 +1,5 @@
+inp z
+add z 4
+inp x
+eql z x
+add z -1
