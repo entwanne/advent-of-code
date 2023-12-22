@@ -43,8 +43,8 @@ def parse(f):
 
 def apply_moves(stacks, moves):
     for n, src, dst in moves:
-        for _ in range(n):
-            item = stacks[src].pop(0)
+        items = [stacks[src].pop(0) for _ in range(n)]
+        for item in reversed(items):
             stacks[dst].insert(0, item)
 
     return stacks
