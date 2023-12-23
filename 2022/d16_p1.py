@@ -14,21 +14,27 @@ def parse(f):
         }
 
 
-def find_max_path(graph, open=set(), current=('AA', 30, 0, 0)):
-    name, n, value, inc = current
-    if n == 0:
-        return value
+def find_max_path(graph):
+    nexts = [('AA', set(), 30, 0, 0)]
 
-    node = graph[name]
-    children = []
+    while nexts:
+        name, open, n, value, inc = nexts.pop(0)
+        print(n)
+        if n == 0:
+            print(value)
+            continue
 
-    if name not in open:
-        children.append(find_max_path(graph, open | {name}, (name, n-1, value+inc, inc+node['rate'])))
+        node = graph[name]
+        children = []
 
-    for name_next in node['nexts']:
-        children.append(find_max_path(graph, open, (name_next, n-1, value+inc, inc)))
+        if name not in open:
+            nexts.append((name, open | {name}, n-1, value+inc, inc+node['rate']))
 
-    return max(children)
+        for name_next in node['nexts']:
+            nexts.append((name_next, open, n-1, value+inc, inc))
+            #children.append(find_max_path(graph, open, (name_next, n-1, value+inc, inc)))
+
+    #return max(children)
 
 
 graph = {valve['name']: valve for valve in parse(sys.stdin)}
