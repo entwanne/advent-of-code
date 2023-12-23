@@ -53,19 +53,20 @@ def find_best_path(graph, start='AA'):
         if n1 == n2 == 0:
             continue
 
-        #if name not in opened and name in toopen:
-        #    node = graph[name]
-        #    nexts.append((name, opened | {name}, n-1, value+inc, inc+node['rate']))
+        if opened == toopen:
+            continue
 
         for link1, dist1 in distances[name1].items():
             if link1 not in opened and link1 in toopen and dist1 <= n1:
                 node1 = graph[link1]
                 dist1 += 1
-                for link2, dist2 in distances[name2].items():
-                    if link2 != link1 and link2 not in opened and link2 in toopen and dist2 <= n2:
-                        node2 = graph[link2]
-                        dist2 += 1
-                        nexts.append((link1, link2, opened | {link1, link2}, n1-dist1, n2-dist2, value1+dist1*inc1, value2+dist2*inc2, inc1+node1['rate'], inc2+node2['rate']))
+                nexts.append((link1, name2, opened | {link1}, n1-dist1, n2, value1+dist1*inc1, value2, inc1+node1['rate'], inc2))
+
+        for link2, dist2 in distances[name2].items():
+            if link2 not in opened and link2 in toopen and dist2 <= n2:
+                node2 = graph[link2]
+                dist2 += 1
+                nexts.append((name1, link2, opened | {link2}, n1, n2-dist2, value1, value2+dist2*inc2, inc1, inc2+node2['rate']))
 
 
 graph = {valve['name']: valve for valve in parse(sys.stdin)}
