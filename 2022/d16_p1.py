@@ -14,46 +14,6 @@ def parse(f):
         }
 
 
-def find_max_path(graph):
-    nexts = {0: [('AA', frozenset(), 30, 0, 0)]}
-    seen = {('AA', frozenset(), 0, 0)}
-
-    while nexts:
-        v = max(nexts)
-        q = nexts[v]
-        name, open, n, value, inc = q.pop(0)
-        if not q:
-            del nexts[v]
-        #print(name, open, n, value, inc)
-
-        #print(n)
-        if n == 0:
-            #print(value)
-            #break
-            print(name, open)
-            yield value
-            continue
-
-        node = graph[name]
-        children = []
-
-        if name not in open and node['rate']:
-            key = (name, open | {name}, value+inc, inc+node['rate'])
-            p = (value+inc) * n
-            if key not in seen:
-                nexts.setdefault(p, []).append((name, open | {name}, n-1, value+inc, inc+node['rate']))
-                seen.add(key)
-
-        for name_next in node['nexts']:
-            key = (name_next, open, value+inc, inc)
-            p = (value+inc) * n
-            if key not in seen:
-                nexts.setdefault(p, []).append((name_next, open, n-1, value+inc, inc))
-                seen.add(key)
-
-    #return max(children)
-
-
 def compute_distances(graph, start):
     distances = {}
     nexts = [(start, 0)]
@@ -83,20 +43,15 @@ def compute_all_distances(graph):
 def find_best_path(graph, start='AA'):
     distances = compute_all_distances(graph)
     toopen = {name for name, node in graph.items() if node['rate'] > 0}
-    nexts = [('AA', set(), 30, 0, 0)]
+    nexts = [(start, set(), 30, 0, 0)]
 
     while nexts:
         name, opened, n, value, inc = nexts.pop(0)
 
-        if n == 0:
-            yield value
-            continue
-
-        #if opened == toopen:
-        #    value += n * inc
-        #    yield value
-        #    continue
         yield value + n * inc
+
+        if n == 0:
+            continue
 
         if name not in opened and name in toopen:
             node = graph[name]
@@ -106,20 +61,7 @@ def find_best_path(graph, start='AA'):
                 node = graph[link]
                 dist += 1
                 nexts.append((link, opened | {link}, n-dist, value+dist*inc, inc+node['rate']))
-                #nexts.append((link, opened, n-dist, value+dist*inc, inc))
 
 
 graph = {valve['name']: valve for valve in parse(sys.stdin)}
-#print(graph)
-#print(max(find_max_path(graph)))
-'''
-n = 0
-for v in find_max_path(graph):
-    print(v)
-    n += 1
-    if n == 20:
-        break
-'''
-#for p in find_best_path(graph):
-#    print(p)
 print(max(find_best_path(graph)))
