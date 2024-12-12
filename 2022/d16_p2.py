@@ -43,14 +43,21 @@ def compute_all_distances(graph):
 def find_best_path(graph, start='AA'):
     distances = compute_all_distances(graph)
     toopen = {name for name, node in graph.items() if node['rate'] > 0}
-    #nexts = [(start, start, frozenset(), 26, 26, 0, 0, 0, 0)]
     nexts = [(start, start, set(), 26, 26, 0, 0, 0, 0)]
-    #seen = set(nexts)
+
+    seen = {}
 
     while nexts:
         name1, name2, opened, n1, n2, value1, value2, inc1, inc2 = nexts.pop(0)
 
-        yield value1 + n1 * inc1 + value2 + n2 * inc2
+        k = frozenset({name1, name2}), max(n1, n2)
+        v = value1 + n1 * inc1 + value2 + n2 * inc2
+
+        if k in seen and seen[k] > v:
+            continue
+        seen[k] = v
+
+        yield v
 
         if n1 <= 0 and n2 <= 0:
             continue
@@ -65,9 +72,8 @@ def find_best_path(graph, start='AA'):
             elif dist2 <= n2:
                 dist2 += 1
                 new = (name1, link, opened | {link}, n1, n2-dist2, value1, value2+dist2*inc2, inc1, inc2+node['rate'])
-            if new: #and new not in seen:
+            if new:
                 nexts.append(new)
-                #seen.add(new)
 
 
 graph = {valve['name']: valve for valve in parse(sys.stdin)}

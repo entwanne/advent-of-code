@@ -45,8 +45,14 @@ def find_best_path(graph, start='AA'):
     toopen = {name for name, node in graph.items() if node['rate'] > 0}
     nexts = [(start, set(), 30, 0, 0)]
 
+    seen = {}
+
     while nexts:
         name, opened, n, value, inc = nexts.pop(0)
+
+        if (name, n) in seen and seen[name, n] > value:
+            continue
+        seen[name, n] = value
 
         yield value + n * inc
 
