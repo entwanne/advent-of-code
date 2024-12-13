@@ -26,10 +26,13 @@ def fall(blocks, directions, piece):
             break
         piece = npiece
 
-    x = min(x for x, _ in piece)
-    y = min(y for _, y in piece) - size(blocks)
+    #x = min(x for x, _ in piece)
+    #y = min(y for _, y in piece) - size(blocks)
     blocks.update(piece)
-    return x, y
+    #return x, y
+    ys = [max((y for x2, y in blocks if x2 == x), default=-1) for x in range(WIDTH)]
+    ymax = max(ys)
+    return tuple(ymax - y for y in ys)
 
 
 def simulation(n, cycle_size, directions):
@@ -37,16 +40,28 @@ def simulation(n, cycle_size, directions):
     pieces = cycle(PIECES)
 
     seen = {}
+    sizes = {}
 
     for i in range(n):
         p = fall(blocks, directions, next(pieces))
+        sizes[i] = size(blocks)
         if i % cycle_size == 0:
-            print(p)
+            #print(p)
             if p in seen:
-                print('!!!', seen[p], i, size(blocks))
+                cycle_range = i - seen[p]
+                cycle_size = sizes[i] - sizes[seen[p]]
+                print('!!!', seen[p], sizes[seen[p]], i, sizes[i])
+                break
             seen[p] = i
 
-    return blocks
+    print(cycle_range, cycle_size)
+    k = (n - i) // cycle_range
+    r = n - (i + cycle_range * k)
+    #print(i, n, k, r)
+    #return blocks
+    #print(i + k * cycle_range + r)
+    #print(sizes[seen[p] + r], sizes[seen[p]])
+    return sizes[i] + k * cycle_size + (sizes[seen[p] + r - 1] - sizes[seen[p]])
 
 
 if __name__ == '__main__':
@@ -57,4 +72,5 @@ if __name__ == '__main__':
     # (= piece placed at the same x and y-size)
     #print(ndirs, len(PIECES), math.lcm(ndirs, len(PIECES)))
     cycle_size = math.lcm(ndirs, len(PIECES))
-    print(size(simulation(2022, cycle_size, directions)))
+    #print(simulation(2022, cycle_size, directions))
+    print(simulation(1000000000000, cycle_size, directions))
