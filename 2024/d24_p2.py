@@ -8,9 +8,8 @@ import z3
 
 from d24_p1 import parse_file, get_bits
 
-NBITS = 45
+NBITS = 46
 #NBITS = 6
-sys.setrecursionlimit(30000)
 
 
 def eval_expr(expr):
@@ -89,145 +88,42 @@ def prove(formula):
     return solver.check() == z3.unsat
 
 
-def _solve_rec(variables, commands, swaps, done):
-    if not swaps:
-        variables = dict(variables)
-        variables = compute(variables, commands)
-        if prove(get_var(variables, 'z') == get_var(variables, 'x') & get_var(variables, 'y')):
-            return done
-        else:
-            return None
+def graphviz_export(commands):
+    output = []
+    output.append('digraph {')
 
-    (output1, output2), *swaps = swaps
-    r = solve_rec(variables, commands[:], swaps, done)
-    if r is not None:
-        return r
-    elif output1 not in done and output2 not in done:
-        swap = {
-            output1: output2,
-            output2: output1,
-        }
-        done = done | swap
-        commands = [
-            (op, left, right, swap.get(output, output))
-            for op, left, right, output in commands
-        ]
-        return solve_rec(variables, commands, swaps, done)
+    for op, left, right, out in commands:
+        op = op.__name__
+        node = f'{op}_{left}_{right}_{out}'
+        output.append(f'{node} [label={op}, shape=box]')
+        output.append(f'{left} -> {node}')
+        output.append(f'{right} -> {node}')
+        output.append(f'{node} -> {out}')
 
+    output.append('}')
 
-def _solve(variables, commands):
-    outputs = {cmd[-1] for cmd in commands}
-    swaps = list(itertools.combinations(outputs, 2))
-    return solve_rec(variables, commands, swaps, {})
-
-
-def solve_rec(context, swaps, done):
-    #print(len(swaps))
-    print(len(swaps))
-    if not swaps:
-        #try:
-        c = {k: eval_expr(v) for k, v in context.items()}
-        #except:
-        #    return None
-        #x = eval_expr(get_var(context, 'x'))
-        #y = eval_expr(get_var(context, 'y'))
-        #z = eval_expr(get_var(context, 'z'))
-        x = get_var(c, 'x')
-        y = get_var(c, 'y')
-        z = get_var(c, 'z')
-        #return done if prove(z == x & y) else None
-        return done if prove(z == x + y) else None
-    if len(done) > 8:
-        return None
-
-    (output1, output2), *swaps = swaps
-    r = solve_rec(context, swaps, done)
-    if r is not None:
-        return r
-    elif output1 not in done and output2 not in done:
-        swap = {
-            output1: output2,
-            output2: output1,
-        }
-        done = done | swap
-        #context = context.copy()
-        context[output1].swap(context[output2])
-        try:
-            return solve_rec(context, swaps, done)
-        finally:
-            context[output1].swap(context[output2])
-
-
-def solve(context, dependencies, outputs):
-    #swaps = list(itertools.combinations(outputs, 2))
-    swaps = [
-        (o1, o2)
-        for o1, o2 in itertools.combinations(outputs, 2)
-        # avoid cycles
-        if o2 not in dependencies.get(o1, ()) and o1 not in dependencies.get(o2, ())
-    ]
-    print(len(swaps))
-    return solve_rec(context, swaps, {})
-
-
-def find_dependencies(context, expr):
-    if isinstance(expr, Var):
-        return {expr.name} | find_dependencies(context, expr.expr)
-    elif isinstance(expr, BinOp):
-        return find_dependencies(context, expr.left) | find_dependencies(context, expr.right)
-    else:
-        return set()
+    return '\n'.join(output)
 
 
 if __name__ == '__main__':
     variables, commands = parse_file(sys.stdin)
 
+    with open('/tmp/d24.dot', 'w') as f:
+        print(graphviz_export(commands), file=f)
+
     x, y = z3.BitVecs('x y', NBITS)
     set_var(variables, 'x', x)
     set_var(variables, 'y', y)
 
-    '''
-    print(solve(variables, commands))
-    '''
     context = compute(variables, commands)
-    outputs = {cmd[-1] for cmd in commands}
-    dependencies = {}
-    for output in outputs:
-        dependencies[output] = find_dependencies(context, context[output].expr)
 
-    outputs = {o for o in outputs if o.startswith('z') or any(o in deps for k, deps in dependencies.items() if k.startswith('z'))}
-
-    #ctx = {name: eval_expr(var) for name, var in ctx.items()}
-    #z = get_var(ctx, 'z')
-    #print(z)
-    #print(prove(z == x & y))
-    #print(solve(context, dependencies, outputs))
     last = 0
-    ok_deps = set()
+
     for i in range(NBITS):
         zi = eval_expr(context[f'z{i:02}'])
-        #print(k, zi, prove(zi == context[f'x{i:02}'] & context[f'y{i:02}']))
         current = last + context.get(f'x{i:02}', 0) + context.get(f'y{i:02}', 0)
         result = prove(zi == current & 1)
-        print(i, prove(zi == current & 1))
-        if result:
-            ok_deps.update(dependencies[f'z{i:02}'])
-        else:
-            test_outputs = dependencies[f'z{i:02}'] #- ok_deps
-            test_outputs |= {zzz for zzz in context if zzz.startswith('z') and int(zzz[1:]) >= i}
-            print(test_outputs)
-            swaps = [
-                (o1, o2)
-                for o1, o2 in itertools.combinations(test_outputs, 2)
-                # avoid cycles
-                if o2 not in dependencies.get(o1, ()) and o1 not in dependencies.get(o2, ())
-            ]
-            print(swaps)
-            for o1, o2 in swaps:
-                context[o1].swap(context[o2])
-                nzi = eval_expr(context[f'z{i:02}'])
-                #print(nzi)
-                print(prove(nzi == current & 1))
-                context[o1].swap(context[o2])
+        print(i, result)
+        if not result:
             break
         last = current >> 1
